@@ -69,9 +69,9 @@ class SentenceDataset(torch.utils.data.Dataset):
 
     def __init__(self, filename, max_len=64, min_count=300):
 
-        sentence = self._read_file(filename)
-        sentence = [s.lower().split() for s in sentence]
-        self.sentence = sentence
+        sentence = self._read_file(filename, max_len)
+        sentence1 = [s.lower().split() for s in sentence]
+        self.sentence = sentence1
         self.max_len = max_len
 
         self.vocab = Vocab(special_tokens=[SentenceDataset.PAD_TOKEN,
@@ -82,11 +82,13 @@ class SentenceDataset(torch.utils.data.Dataset):
         self.vocab.add_documents(self.sentence)
         self.vocab.prune_vocab(min_count=min_count)
 
-    def _read_file(self, filename):
+
+
+    def _read_file(self, filename, max_len):
         with open(filename, 'r', encoding='utf8') as f:
             sentence = []
             for line in f:
-                if line.count(' ') < 10:
+                if line.count(' ') < max_len:
                     sentence.append(line[:-2])
         return sentence
 

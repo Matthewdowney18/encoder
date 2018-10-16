@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.utils.data
+import time
 
 from dataset import SentenceDataset
 from model import Seq2SeqModel, Seq2SeqModelAttention
@@ -24,7 +25,8 @@ def main():
 
 
     #eng_fr_filename = '/mnt/data1/datasets/yelp/merged/train'
-    eng_fr_filename = '/home/okovaleva/projects/forced_apart/autoencoder/data'
+    eng_fr_filename = '/home/okovaleva/projects/forced_apart/autoencoder/data' \
+                      '/train.txt'
     dataset = SentenceDataset(eng_fr_filename, max_len, min_count)
     print('Dataset: {}'.format(len(dataset)))
 
@@ -32,10 +34,10 @@ def main():
     dataset_train, dataset_val = torch.utils.data.dataset.random_split(dataset, [train_len, val_len])
     print('Train {}, val: {}'.format(len(dataset_train), len(dataset_val)))
 
-    #embeddings_dir = '/home/mattd/pycharm/yelp/embeddings.npy'
-    #pretrained_embeddings, embedding_dim = cuda(
-    #    get_pretrained_embeddings(embeddings_dir, dataset))
-
+    embeddings_dir = '/home/mattd/pycharm/encoder/embeddings_2min.npy'
+    pretrained_embeddings = cuda(
+        get_pretrained_embeddings(embeddings_dir, dataset))
+    embedding_dim = pretrained_embeddings.shape[1]
 
     data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size, shuffle=True)
     data_loader_val = torch.utils.data.DataLoader(dataset_val, batch_size, shuffle=False)
@@ -44,7 +46,7 @@ def main():
     padding_idx = dataset.vocab[SentenceDataset.PAD_TOKEN]
     init_idx = dataset.vocab[SentenceDataset.INIT_TOKEN]
 
-    model = Seq2SeqModel(
+    model = Seq2SeqModelAttention(
         pretrained_embeddings, hidden_size, padding_idx, init_idx,
                          max_len, vocab_size, embedding_dim)
     model = cuda(model)
@@ -53,7 +55,8 @@ def main():
     optimizer = torch.optim.Adam(parameters, amsgrad=True, weight_decay=weight_decay)
     criterion = torch.nn.CrossEntropyLoss(ignore_index=dataset.vocab[SentenceDataset.PAD_TOKEN])
 
-    model, optimizer, loss = load_checkpoint(model_filename, model, optimizer)
+    #model, optimizer, loss, description = load_checkpoint(
+    #    model_filename, model, optimizer)
 
     phases = ['train', 'val', ]
     data_loaders = [data_loader_train, data_loader_val, ]
@@ -61,6 +64,7 @@ def main():
     lowest_loss = 500
 
     for epoch in range(nb_epochs):
+        start = time.clock()
         for phase, data_loader in zip(phases, data_loaders):
             if phase == 'train':
                 model.train()
@@ -98,7 +102,10 @@ def main():
             if phase == 'train':
                 print('Epoch {:03d} | {} loss: {:.3f}'.format(epoch, phase, epoch_loss), end='')
             else:
-                print(', {} loss: {:.3f}'.format(phase, epoch_loss), end='\n')
+                time_taken = time.clock() - start
+                print(', {} loss: {:.3f} time: {:.3f}'.format(
+                    phase, epoch_loss, time_taken), end='\n')
+
 
             # print random sentence
             if phase == 'val':

@@ -32,8 +32,10 @@ class Seq2SeqModel(torch.nn.Module):
 
         self.drop = nn.Dropout(p=0.5)
 
-        #self.emb = nn.Embedding.from_pretrained(embeddings, freeze=True)
-        self.emb = nn.Embedding(self.vocab_size, self.embedding_dim)
+        if embeddings is not None:
+            self.emb = nn.Embedding.from_pretrained(embeddings, freeze=True)
+        else:
+            self.emb = nn.Embedding(self.vocab_size, self.embedding_dim)
 
         self.enc = nn.LSTM(self.embedding_dim, hidden_size, batch_first=True,
                            bidirectional= True)
@@ -150,10 +152,10 @@ class Seq2SeqModel(torch.nn.Module):
         :return: A tensor of size (batch_size x max_len x vocab_size)
         """
 
-        if self.training and np.random.rand() < self.teacher_forcing:
-            targets = inputs
-        else:
-            targets = None
+        #if self.training and np.random.rand() < self.teacher_forcing:
+        #    targets = inputs
+        #else:
+        #    targets = None
 
         z = self.encode_sentence(inputs)
         outputs = self.decode_sentence(z, targets)
@@ -195,8 +197,10 @@ class Seq2SeqModelAttention(torch.nn.Module):
         self.attn_combine = nn.Linear(self.combined_hidden_size +self.embedding_dim,
                                       self.combined_hidden_size)
 
-        #self.emb = nn.Embedding.from_pretrained(embeddings, freeze=True)
-        self.emb = nn.Embedding(self.vocab_size, self.embedding_dim)
+        if embeddings is not None:
+            self.emb = nn.Embedding.from_pretrained(embeddings, freeze=True)
+        else:
+            self.emb = nn.Embedding(self.vocab_size, self.embedding_dim)
 
         self.enc = nn.LSTM(self.embedding_dim, self.hidden_size,
                            batch_first=True,

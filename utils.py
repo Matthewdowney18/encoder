@@ -60,7 +60,7 @@ def get_sentence_from_indices(indices, vocab, eos_token, join=True):
 def get_pretrained_embeddings(embeddings_dir, dataset):
     embeddings = np.load(embeddings_dir)
     emb_tensor = torch.FloatTensor(embeddings)
-    return emb_tensor, emb_tensor.shape[1]
+    return emb_tensor
 
 def get_description():
     filename = "./description.txt"
@@ -82,13 +82,17 @@ def save_checkpoint(model, loss, optimizer, filename):
         }
     torch.save(state, filename)
 
+
+
 def load_checkpoint(filename, model, optimizer):
     if os.path.isfile(filename):
         checkpoint = torch.load(filename)
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         loss = checkpoint['loss']
+        description = checkpoint['description']
     else:
         print("=> no checkpoint found at '{}'".format(filename))
         loss = 0
-    return model, optimizer, loss
+        description = ['none']
+    return model, optimizer, loss, description
