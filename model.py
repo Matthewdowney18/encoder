@@ -8,7 +8,7 @@ from utils import get_sequences_lengths, variable, argmax
 
 class Seq2SeqModel(torch.nn.Module):
     def __init__(self, embeddings, hidden_size, padding_idx,
-                 init_idx, max_len, teacher_forcing):
+                 init_idx, max_len, vocab_size, embedding_dim):
         """
         Sequence-to-sequence model
         :param vocab_size: the size of the vocabulary
@@ -21,19 +21,19 @@ class Seq2SeqModel(torch.nn.Module):
         """
         super().__init__()
 
-        self.embedding_dim = embeddings.shape[1]
+        self.embedding_dim = embedding_dim
         self.hidden_size = hidden_size
         self.combined_hidden_size = hidden_size * 2
         self.padding_idx = padding_idx
         self.init_idx = init_idx
         self.max_len = max_len
-        self.teacher_forcing = teacher_forcing
-        self.vocab_size = embeddings.shape[0]
+        #self.teacher_forcing = teacher_forcing
+        self.vocab_size = vocab_size
 
         self.drop = nn.Dropout(p=0.5)
 
-        self.emb = nn.Embedding.from_pretrained(embeddings, freeze=True)
-        #self.emb = nn.Embedding(self.vocab_size, self.embedding_dim)
+        #self.emb = nn.Embedding.from_pretrained(embeddings, freeze=True)
+        self.emb = nn.Embedding(self.vocab_size, self.embedding_dim)
 
         self.enc = nn.LSTM(self.embedding_dim, hidden_size, batch_first=True,
                            bidirectional= True)
@@ -166,7 +166,7 @@ class Seq2SeqModel(torch.nn.Module):
 
 class Seq2SeqModelAttention(torch.nn.Module):
     def __init__(self, embeddings, hidden_size, padding_idx,
-                 init_idx, max_len, teacher_forcing):
+                 init_idx, max_len, vocab_size, embedding_dim):
         """
         Sequence-to-sequence model
         :param vocab_size: the size of the vocabulary
@@ -179,14 +179,14 @@ class Seq2SeqModelAttention(torch.nn.Module):
         """
         super().__init__()
 
-        self.embedding_dim = embeddings.shape[1]
+        self.embedding_dim = embedding_dim
         self.hidden_size = hidden_size
-        self.combined_hidden_size = hidden_size *2
+        self.combined_hidden_size = hidden_size * 2
         self.padding_idx = padding_idx
         self.init_idx = init_idx
         self.max_len = max_len
-        self.teacher_forcing = teacher_forcing
-        self.vocab_size = embeddings.shape[0]
+        # self.teacher_forcing = teacher_forcing
+        self.vocab_size = vocab_size
 
         self.drop = nn.Dropout(p=0.5)
 
@@ -195,8 +195,8 @@ class Seq2SeqModelAttention(torch.nn.Module):
         self.attn_combine = nn.Linear(self.combined_hidden_size +self.embedding_dim,
                                       self.combined_hidden_size)
 
-        self.emb = nn.Embedding.from_pretrained(embeddings, freeze=True)
-        #self.emb = nn.Embedding(self.vocab_size, self.embedding_dim)
+        #self.emb = nn.Embedding.from_pretrained(embeddings, freeze=True)
+        self.emb = nn.Embedding(self.vocab_size, self.embedding_dim)
 
         self.enc = nn.LSTM(self.embedding_dim, self.hidden_size,
                            batch_first=True,
