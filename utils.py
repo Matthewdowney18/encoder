@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 import os
+from sklearn.metrics import accuracy_score
 from torch.nn import Parameter
 
 
@@ -96,3 +97,28 @@ def load_checkpoint(filename, model, optimizer):
         loss = 0
         description = ['none']
     return model, optimizer, loss, description
+
+
+def freeze_layer(layer, bool):
+    for param in layer.parameters():
+        param.requires_grad = not bool
+    layer.training = not bool
+    return layer
+
+def accuracy(targets, predicted):
+    batch_size = targets.size()
+    sentence_acc = [1]* batch_size[0]
+    token_acc = []
+    for batch in range(0, batch_size[0]):
+        for token in range(0, batch_size[1]):
+            if targets[batch, token] != 0:
+                if targets[batch, token] != predicted[batch, token]:
+                    sentence_acc[batch] = 0
+                    token_acc.append(0)
+                else:
+                    token_acc.append(1)
+
+    sentence_accuracy = sum(sentence_acc)/len(sentence_acc)
+    token_accuracy = sum(token_acc) / len(
+        token_acc)
+    return sentence_accuracy, token_accuracy

@@ -6,7 +6,8 @@ import time
 from dataset import SentenceDataset
 from model import Seq2SeqModel, Seq2SeqModelAttention
 from utils import variable, cuda, argmax, get_sentence_from_indices, \
-    get_pretrained_embeddings, save_checkpoint, load_checkpoint
+    get_pretrained_embeddings, save_checkpoint, load_checkpoint, freeze_layer, \
+    accuracy
 
 
 def main():
@@ -55,8 +56,8 @@ def main():
     optimizer = torch.optim.Adam(parameters, amsgrad=True, weight_decay=weight_decay)
     criterion = torch.nn.CrossEntropyLoss(ignore_index=dataset.vocab[SentenceDataset.PAD_TOKEN])
 
-    #model, optimizer, loss, description = load_checkpoint(
-    #    model_filename, model, optimizer)
+    model, optimizer, loss, description = load_checkpoint(
+        model_filename, model, optimizer)
 
     phases = ['train', 'val', ]
     data_loaders = [data_loader_train, data_loader_val, ]
@@ -65,6 +66,12 @@ def main():
 
     for epoch in range(nb_epochs):
         start = time.clock()
+
+        #if epoch < 7:
+        #    model.emb = freeze_layer(model.emb, True)
+        #else:
+        #    model.emb = freeze_layer(model.emb, False)
+
         for phase, data_loader in zip(phases, data_loaders):
             if phase == 'train':
                 model.train()
@@ -72,7 +79,9 @@ def main():
                 model.eval()
 
             epoch_loss = []
-            val_loss = []
+            epoch_sentenence_accuracy = []
+            epoch_token_accuracy = []
+
             for i, inputs in enumerate(data_loader):
                 optimizer.zero_grad()
 
@@ -91,7 +100,15 @@ def main():
                     torch.nn.utils.clip_grad_norm_(parameters, max_grad_norm)
                     optimizer.step()
 
+                if phase == 'val':
+                    predicted = torch.argmax(outputs.view(batch_size, max_len,
+                                                          -1), -1)
+                    batch_sentenence_accuracy, batch_token_accuracy = accuracy(
+                        targets.view(batch_size, -1), predicted)
+                    epoch_sentenence_accuracy.append(batch_sentenence_accuracy)
+                    epoch_token_accuracy.append(batch_token_accuracy)
                 epoch_loss.append(float(loss))
+
 
             epoch_loss = np.mean(epoch_loss)
 
@@ -100,11 +117,18 @@ def main():
                 lowest_loss = epoch_loss
 
             if phase == 'train':
-                print('Epoch {:03d} | {} loss: {:.3f}'.format(epoch, phase, epoch_loss), end='')
+                print('Epoch {:03d} | {} loss: {:.3f}'.format(
+                    epoch, phase, epoch_loss), end='')
             else:
+                averege_epoch_sentenence_accuracy = sum(epoch_sentenence_accuracy) / \
+                    len(epoch_sentenence_accuracy)
+                averege_epoch_token_accuracy = sum(epoch_token_accuracy) / \
+                    len(epoch_token_accuracy)
                 time_taken = time.clock() - start
-                print(', {} loss: {:.3f} time: {:.3f}'.format(
-                    phase, epoch_loss, time_taken), end='\n')
+                print(' {}: loss: {:.3f} | time: {:.3f}'.format(
+                    phase, epoch_loss, time_taken), end='')
+                print('| sentence accuracy:{:.3f}| token accuracy:{:.3f}'.format(
+                    averege_epoch_sentenence_accuracy, averege_epoch_token_accuracy), end='\n')
 
 
             # print random sentence
