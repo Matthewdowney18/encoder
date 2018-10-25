@@ -33,7 +33,7 @@ class Seq2SeqModel(torch.nn.Module):
         self.drop = nn.Dropout(p=0.5)
 
         if embeddings is not None:
-            self.emb = nn.Embedding.from_pretrained(embeddings, freeze=True)
+            self.emb = nn.Embedding.from_pretrained(embeddings, freeze=False)
         else:
             self.emb = nn.Embedding(self.vocab_size, self.embedding_dim)
 
@@ -41,6 +41,10 @@ class Seq2SeqModel(torch.nn.Module):
                            bidirectional= True)
         self.dec = nn.LSTMCell(self.embedding_dim, self.combined_hidden_size)
         self.lin = nn.Linear(self.combined_hidden_size, self.vocab_size)
+
+    def unfreeze_embeddings(self):
+        self.emb = nn.Embedding.from_pretrained(
+            self.embeddings, freeze=False)
 
     def zero_state(self, batch_size):
         """
@@ -181,6 +185,7 @@ class Seq2SeqModelAttention(torch.nn.Module):
         """
         super().__init__()
 
+        self.embeddings = embeddings
         self.embedding_dim = embedding_dim
         self.hidden_size = hidden_size
         self.combined_hidden_size = hidden_size * 2
@@ -197,8 +202,9 @@ class Seq2SeqModelAttention(torch.nn.Module):
         self.attn_combine = nn.Linear(self.combined_hidden_size +self.embedding_dim,
                                       self.combined_hidden_size)
 
-        if embeddings is not None:
-            self.emb = nn.Embedding.from_pretrained(embeddings, freeze=True)
+        if self.embeddings is not None:
+            self.emb = nn.Embedding.from_pretrained(
+                self.embeddings, freeze=False)
         else:
             self.emb = nn.Embedding(self.vocab_size, self.embedding_dim)
 
@@ -209,6 +215,9 @@ class Seq2SeqModelAttention(torch.nn.Module):
                                self.combined_hidden_size)
         self.lin = nn.Linear(self.combined_hidden_size, self.vocab_size)
 
+    def unfreeze_embeddings(self):
+        self.emb = nn.Embedding.from_pretrained(
+            self.embeddings, freeze=False)
 
     def zero_state(self, batch_size):
         """
@@ -330,17 +339,19 @@ class Seq2SeqModelAttention(torch.nn.Module):
 
         return outputs
 
-    def forward(self, inputs, targets=None):
+    def forward(self, inputs, targets=None, unfreeze=False):
         """
         Perform the forward pass of the network and return non-normalized probabilities of the output tokens at each timestep
         :param inputs: A tensor of size (batch_size x max_len) of indices of input sentences' tokens
         :return: A tensor of size (batch_size x max_len x vocab_size)
         """
 
+
         # if self.training and np.random.rand() < self.teacher_forcing:
         #     targets = inputs
         # else:
         #     targets = None
+
 
         z, z1 = self.encode_sentence(inputs)
         outputs = self.decode_sentence(z, z1, targets)
