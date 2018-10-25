@@ -63,23 +63,27 @@ def get_pretrained_embeddings(embeddings_dir, dataset):
     emb_tensor = torch.FloatTensor(embeddings)
     return emb_tensor
 
-def get_description():
-    filename = "./description.txt"
-    if os.path.exists(filename):
+def get_description(description_filename):
+    if os.path.exists(description_filename):
         description = list()
-        with open(filename, 'r', encoding='utf8') as f:
+        with open(description_filename, 'r', encoding='utf8') as f:
             for line in f:
                 description.append(line)
         return description
     else:
         return ['none']
 
-def save_checkpoint(model, loss, optimizer, filename):
+def save_checkpoint(model, loss, optimizer, filename, description_filename,
+                    epoch, train_loss, val_loss):
     state = {
             'state_dict': model.state_dict(),
-            'loss' : loss,
+            'loss': loss,
+            ''
             'optimizer' : optimizer.state_dict(),
-            'description' : get_description()
+            'description' : get_description(description_filename),
+            'epoch' : epoch,
+            'train_loss' : train_loss,
+            'val_loss' : val_loss
         }
     torch.save(state, filename)
 
@@ -92,11 +96,23 @@ def load_checkpoint(filename, model, optimizer):
         optimizer.load_state_dict(checkpoint['optimizer'])
         loss = checkpoint['loss']
         description = checkpoint['description']
+        if 'epoch' in checkpoint:
+            epoch = checkpoint['epoch']
+        else:
+            epoch = 6
+        if 'train_loss' in checkpoint:
+            train_loss = checkpoint['train_loss']
+        else:
+            train_loss = []
+            val_loss = []
     else:
         print("=> no checkpoint found at '{}'".format(filename))
-        loss = 0
+        loss = 500
         description = ['none']
-    return model, optimizer, loss, description
+        epoch = 0
+        train_loss = []
+        val_loss = []
+    return model, optimizer, loss, description, epoch, train_loss, val_loss
 
 
 def freeze_layer(layer, bool):
